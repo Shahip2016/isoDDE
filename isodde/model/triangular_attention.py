@@ -120,20 +120,20 @@ class TriangularAttention(nn.Module):
         """Standard O(n³) attention computation."""
         scale = math.sqrt(self.head_dim)
         # Attention along the last N dimension (for each row i):
-        # attn[i,j,k] = softmax_k(q[i,j] · k[i,k] + bias[i,j,k])
-        attn = torch.einsum("bijnhd,biknhd->bijknh", q, k) / scale
+        # attn[i,j,k] = softmax_k(q[i,j] · k[i,k] + bias[i,k])
+        attn = torch.einsum("bijhd,bikhd->bijkh", q, k) / scale
 
-        # Rearrange bias to match: (B, N, N, H) -> attn dims
-        # We want bias[i,k,h] added to attn for row i
-        attn = attn + bias.unsqueeze(-4).movedim(-1, -1)
+        # Rearrange bias to match: (B, N, N, H) -> (B, i, 1, k, H)
+        attn = attn + bias.unsqueeze(2)
 
         if mask is not None:
-            attn_mask = mask.unsqueeze(-3).unsqueeze(-1)
+            # mask has shape (B, N, N) corresponding to (B, i, k)
+            attn_mask = mask.unsqueeze(2).unsqueeze(-1)
             attn = attn.masked_fill(~attn_mask, float("-inf"))
 
-        attn = F.softmax(attn, dim=-3)
+        attn = F.softmax(attn, dim=-2)
 
-        out = torch.einsum("bijknh,biknhd->bijnhd", attn, v)
+        out = torch.einsum("bijkh,bikhd->bijhd", attn, v)
         return out.flatten(-2)
 
     def _chunked_attention(

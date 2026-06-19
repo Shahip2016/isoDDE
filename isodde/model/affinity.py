@@ -102,7 +102,7 @@ class BindingAffinityHead(nn.Module):
         dist_matrix = torch.cdist(coords, coords)  # (B, N, N)
         
         # RBF encode distances
-        rbf_dist = rbf_encoding(dist_matrix, num_bins=32, max_dist=20.0)  # (B, N, N, 32)
+        rbf_dist = rbf_encoding(dist_matrix, d_min=0.0, d_max=20.0, num_rbf=32)  # (B, N, N, 32)
         spatial_features = self.dist_projection(rbf_dist)  # (B, N, N, hidden_dim)
 
         # Combine spatial features with trunk pair representations
@@ -134,7 +134,7 @@ class BindingAffinityHead(nn.Module):
         # Query with pool_query parameter
         q = self.pool_query.expand(B, 1, -1)
         pool_mask = interaction_mask.unsqueeze(1)
-        pooled = self.pool_attention(q, kv=h_flat, mask=pool_mask)  # (B, 1, hidden_dim)
+        pooled = self.pool_attention(q, kv_input=h_flat, mask=pool_mask)  # (B, 1, hidden_dim)
 
         # Predict final scalar binding free energy
         affinity = self.predict_head(pooled.squeeze(1))  # (B, 1)

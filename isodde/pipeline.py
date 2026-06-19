@@ -96,6 +96,8 @@ class IsoDDEPipeline:
         chain_index = merged.chain_index.unsqueeze(0).to(device)
         mask = torch.ones_like(token_ids, dtype=torch.bool, device=device)
 
+        full_elements = ["C"] * len(protein_sequence) + (ligand_elements if ligand_elements else [])
+
         # 2. Multi-seed structure generation
         sample_out = sample_multi_seed(
             model=self.structure_model,
@@ -106,7 +108,7 @@ class IsoDDEPipeline:
             mask=mask,
             num_seeds=num_seeds,
             violation_filter=self.config.inference.violation_filter,
-            elements=ligand_elements,
+            elements=full_elements,
         )
 
         best_coords = sample_out["best_coords"].unsqueeze(0)  # (1, N, 3)

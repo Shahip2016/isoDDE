@@ -29,45 +29,60 @@ pip install -e .
 
 ## Quick Start
 
+### Python API
+
 ```python
 from isodde.pipeline import IsoDDEPipeline
 
+# Initialize the pipeline (using small config for resource friendliness)
 pipeline = IsoDDEPipeline()
 
-# Structure prediction
-result = pipeline.predict_structure(
-    protein_sequence="MKTLLILAVL...",
-    ligand_smiles="CC(=O)Oc1ccccc1C(=O)O",
+# Run end-to-end structure co-folding, pocket identification, and binding affinity estimation
+results = pipeline.run_cofolding(
+    protein_sequence="MTEYKLVVVGAGGVGKSALTI",
+    ligand_elements=["C", "C", "O", "N"],
+    num_seeds=3,
 )
 
-# Binding affinity
-affinity = pipeline.predict_affinity(
-    protein_sequence="MKTLLILAVL...",
-    ligand_smiles="CC(=O)Oc1ccccc1C(=O)O",
-)
+print(f"Confidence score (pLDDT): {results['pLDDT']:.4f}")
+print(f"Predicted pTM:            {results['ptm']:.4f}")
+print(f"Predicted Affinity (pKd): {results['binding_affinity_pkd']:.4f}")
+print(f"Pockets Identified:       {len(results['pockets'])}")
+```
 
-# Pocket identification
-pockets = pipeline.identify_pockets(
-    protein_sequence="MKTLLILAVL...",
-)
+### CLI Interface
+
+```bash
+# Run prediction using CLI
+py -m isodde.cli --sequence MTEYKLVVVGAGGVGKSALTI --ligand C,C,O,N --output-dir predictions --num-seeds 3
+```
+
+## Tests
+
+You can run the full test suite using the Python Launcher (`py`):
+
+```bash
+py -m pytest tests/ -v
 ```
 
 ## Architecture
 
 The IsoDDE model follows the trunk-and-heads paradigm:
 
-1. **Input Embedding** — Tokenizes proteins, ligands, nucleic acids
+1. **Input Embedding** — Tokenizes proteins, ligands, nucleic acids.
 2. **MSA Module** — Processes multiple sequence alignments with improved
-   single↔pair information flow
+   single↔pair information flow (OPM computed before row attention).
 3. **Pairformer** — Triangular attention and multiplicative updates on
-   pair representations (wider representations, O(n²) memory)
+   pair representations (wider representations, O(n²) memory).
 4. **Diffusion Head** — Score-based generative model for 3D coordinate
-   prediction
+   prediction.
 5. **Confidence Head** — pLDDT, pTM, ipTM for ranking multi-seed
-   predictions
+   predictions.
 6. **Affinity Head** — Structure-conditioned binding free energy
-   estimation
-7. **Pocket Head** — Residue-level ligandability scoring
+   estimation.
+7. **Pocket Head** — Residue-level ligandability scoring and single-linkage spatial clustering.
+
+For more details, see [docs/architecture.md](docs/architecture.md) and [docs/benchmarks.md](docs/benchmarks.md).
 
 ## Citation
 

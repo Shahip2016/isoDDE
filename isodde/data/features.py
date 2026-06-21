@@ -11,6 +11,67 @@ import torch.nn as nn
 from torch import Tensor
 
 from isodde.utils.tensor_utils import one_hot, rbf_encoding
+from isodde.data.chemical import ELEMENT_PROPERTIES
+from isodde.data.tokenizer import ELEMENTS
+
+
+class LigandPhysicalEmbedding(nn.Module):
+    """Compute physical property embeddings for ligand atoms.
+
+    Uses element features (atomic number, mass, covalent radius, VdW radius)
+    and projects them to the single representation dimension.
+    """
+
+    def __init__(self, single_dim: int = 256) -> None:
+        super().__init__()
+        self.single_proj = nn.Linear(4, single_dim)
+
+        # Precompute property table for the elements
+        # 13 standard elements + 1 unknown
+        num_elements = len(ELEMENTS) + 1
+        properties = torch.zeros(num_elements, 4, dtype=torch.float32)
+
+        for idx, symbol in enumerate(ELEMENTS):
+            props = ELEMENT_PROPERTIES[symbol]
+            properties[idx, 0] = float(props.atomic_number)
+            properties[idx, 1] = float(props.mass)
+            properties[idx, 2] = float(props.van_der_waals_radius)
+            properties[idx, 3] = float(props.covalent_radius)
+
+        # For unknown/fallback element, use mean properties of all elements
+        properties[-1] = properties[:-1].mean(dim=0)
+
+        # Register properties as a non-trainable buffer
+        self.register_buffer("properties", properties)
+
+    def forward(self, token_ids: Tensor, is_ligand: Tensor) -> Tensor:
+        """Compute physical property embeddings.
+
+        Parameters
+        ----------
+        token_ids : Tensor (B, N)
+            Token indices (should represent element indices for ligand).
+        is_ligand : Tensor (B, N)
+            Boolean mask indicating which tokens are ligand atoms.
+
+        Returns
+        -------
+        Tensor (B, N, single_dim)
+            Physical embeddings, zeroed out for non-ligand tokens.
+        """
+        # Clamp token IDs to safety range
+        clamped_ids = token_ids.clamp(0, self.properties.size(0) - 1)
+
+        # Look up properties: (B, N, 4)
+        feat = self.properties[clamped_ids]
+
+        # Project: (B, N, single_dim)
+        embedded = self.single_proj(feat)
+
+        # Mask out non-ligand tokens
+        embedded = embedded * is_ligand.unsqueeze(-1).float()
+
+        return embedded
 
 
 class InputEmbedding(nn.Module):
@@ -51,6 +112,9 @@ class InputEmbedding(nn.Module):
         self.token_embedding = nn.Embedding(num_residue_types, single_dim)
         self.token_type_embedding = nn.Embedding(num_token_types, single_dim)
 
+        # Physical embedding for ligand atoms
+        self.ligand_physical_embedding = LigandPhysicalEmbedding(single_dim)
+
         # Relative position encoding for pair representation
         self.relpos_embedding = nn.Embedding(
             2 * max_relative_position + 1, pair_dim
@@ -86,6 +150,10 @@ class InputEmbedding(nn.Module):
         """
         # Single representation
         single = self.token_embedding(token_ids) + self.token_type_embedding(token_type)
+
+        # Add physical property embeddings for ligand tokens (type = 3)
+        is_ligand = (token_type == 3)
+        single = single + self.ligand_physical_embedding(token_ids, is_ligand)
 
         # Pair representation
         left = self.left_proj(single)

@@ -110,3 +110,40 @@ class TriangularMultiplicationIncoming(TriangularMultiplication):
 
     def __init__(self, pair_dim: int, inner_dim: Optional[int] = None) -> None:
         super().__init__(pair_dim, inner_dim, outgoing=False)
+
+
+class DualTriangularMultiplication(nn.Module):
+    """Dual triangular multiplicative update.
+
+    Computes both outgoing and incoming triangular updates and combines
+    their representations with a gated linear layer.
+    """
+
+    def __init__(self, pair_dim: int, inner_dim: Optional[int] = None) -> None:
+        super().__init__()
+        self.outgoing = TriangularMultiplicationOutgoing(pair_dim, inner_dim)
+        self.incoming = TriangularMultiplicationIncoming(pair_dim, inner_dim)
+
+        self.merge_proj = IsoLinear(2 * pair_dim, pair_dim)
+        self.gate_proj = IsoLinear(2 * pair_dim, pair_dim)
+
+    def forward(self, pair: Tensor, pair_mask: Optional[Tensor] = None) -> Tensor:
+        """Apply outgoing and incoming updates and fuse.
+
+        Parameters
+        ----------
+        pair : Tensor (B, N, N, pair_dim)
+        pair_mask : Tensor (B, N, N), optional
+
+        Returns
+        -------
+        Tensor (B, N, N, pair_dim)
+        """
+        out_val = self.outgoing(pair, pair_mask)
+        in_val = self.incoming(pair, pair_mask)
+
+        combined = torch.cat([out_val, in_val], dim=-1)
+        merged = self.merge_proj(combined)
+        gate = torch.sigmoid(self.gate_proj(combined))
+
+        return merged * gate

@@ -18,7 +18,13 @@ from isodde.model.msa_module import MSAModule
 from isodde.model.pairformer import Pairformer
 from isodde.model.diffusion import DiffusionModule
 from isodde.model.confidence import ConfidenceHead
-from isodde.model.heads import DistogramHead, ExperimentallyResolvedHead, MaskedMSAHead
+from isodde.model.heads import (
+    DistogramHead,
+    ExperimentallyResolvedHead,
+    MaskedMSAHead,
+    SecondaryStructureHead,
+    SolventAccessibilityHead,
+)
 
 
 class IsoDDEStructurePrediction(nn.Module):
@@ -110,6 +116,12 @@ class IsoDDEStructurePrediction(nn.Module):
         self.masked_msa_head = MaskedMSAHead(
             msa_dim=config.msa.msa_embedding_dim
         )
+        self.secondary_structure_head = SecondaryStructureHead(
+            single_dim=config.pairformer.single_dim
+        )
+        self.solvent_accessibility_head = SolventAccessibilityHead(
+            single_dim=config.pairformer.single_dim
+        )
 
     def forward(
         self,
@@ -183,5 +195,7 @@ class IsoDDEStructurePrediction(nn.Module):
         outputs["distogram_logits"] = self.distogram_head(pair)
         outputs["resolved_logits"] = self.experimentally_resolved_head(single)
         outputs["masked_msa_logits"] = self.masked_msa_head(msa_feat)
+        outputs["secondary_structure_logits"] = self.secondary_structure_head(single)
+        outputs["solvent_accessibility"] = self.solvent_accessibility_head(single)
 
         return outputs

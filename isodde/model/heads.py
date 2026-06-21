@@ -138,3 +138,58 @@ class MaskedMSAHead(nn.Module):
         Tensor (B, N_msa, N_res, num_tokens)
         """
         return self.net(msa)
+
+
+class SecondaryStructureHead(nn.Module):
+    """Predict 3-state secondary structure categories for each residue.
+
+    States: Helix (0), Sheet (1), Coil/Loop (2).
+    """
+
+    def __init__(self, single_dim: int = 256) -> None:
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.LayerNorm(single_dim),
+            IsoLinear(single_dim, single_dim),
+            nn.SiLU(),
+            IsoLinear(single_dim, 3),
+        )
+
+    def forward(self, single: Tensor) -> Tensor:
+        """Predict secondary structure logits.
+
+        Parameters
+        ----------
+        single : Tensor (B, N, single_dim)
+
+        Returns
+        -------
+        Tensor (B, N, 3)
+        """
+        return self.net(single)
+
+
+class SolventAccessibilityHead(nn.Module):
+    """Predict relative solvent accessibility value for each residue."""
+
+    def __init__(self, single_dim: int = 256) -> None:
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.LayerNorm(single_dim),
+            IsoLinear(single_dim, single_dim),
+            nn.SiLU(),
+            IsoLinear(single_dim, 1),
+        )
+
+    def forward(self, single: Tensor) -> Tensor:
+        """Predict solvent accessibility values.
+
+        Parameters
+        ----------
+        single : Tensor (B, N, single_dim)
+
+        Returns
+        -------
+        Tensor (B, N)
+        """
+        return self.net(single).squeeze(-1)

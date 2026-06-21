@@ -87,3 +87,79 @@ def save_prediction_json(data: Dict[str, Any], output_path: str) -> None:
     """Save prediction metrics and metadata to JSON."""
     with open(output_path, "w") as f:
         json.dump(data, f, indent=4)
+
+
+def write_coords_to_sdf(
+    coords: List[List[float]],
+    elements: List[str],
+    output_path: str,
+    molecule_name: str = "IsoDDE_Ligand",
+) -> None:
+    """Write coordinates and elements to a standard MDL SDF format file.
+
+    Parameters
+    ----------
+    coords : List of [x, y, z] coordinates.
+    elements : List of element symbols corresponding to each coordinate.
+    output_path : Target SDF file path.
+    molecule_name : Name of the molecule.
+    """
+    with open(output_path, "w") as f:
+        f.write(f"{molecule_name}\n")
+        f.write("  IsoDDE 3D Predictor\n\n")
+        
+        num_atoms = len(coords)
+        f.write(f"{num_atoms:3d}  0  0  0  0  0  0  0  0  0999 V2000\n")
+        
+        for coord, elem in zip(coords, elements):
+            f.write(
+                f"{coord[0]:10.4f}{coord[1]:10.4f}{coord[2]:10.4f} "
+                f"{elem:<3s} 0  0  0  0  0  0  0  0  0  0  0  0\n"
+            )
+            
+        f.write("M  END\n")
+        f.write("$$$$\n")
+
+
+def parse_sdf_file(sdf_path: str) -> Tuple[List[List[float]], List[str]]:
+    """Parse coordinates and elements from a standard MDL SDF format file.
+
+    Parameters
+    ----------
+    sdf_path : Path to SDF file.
+
+    Returns
+    -------
+    Tuple (coordinates, elements)
+        List of [x, y, z] coordinates and list of element symbols.
+    """
+    coords = []
+    elements = []
+    
+    with open(sdf_path, "r") as f:
+        lines = f.readlines()
+        
+    if len(lines) < 4:
+        return coords, elements
+        
+    counts_line = lines[3]
+    try:
+        num_atoms = int(counts_line[:3].strip())
+    except ValueError:
+        return coords, elements
+        
+    for i in range(4, 4 + num_atoms):
+        if i >= len(lines):
+            break
+        line = lines[i]
+        try:
+            x = float(line[0:10].strip())
+            y = float(line[10:20].strip())
+            z = float(line[20:30].strip())
+            elem = line[31:34].strip()
+            coords.append([x, y, z])
+            elements.append(elem)
+        except (ValueError, IndexError):
+            continue
+            
+    return coords, elements

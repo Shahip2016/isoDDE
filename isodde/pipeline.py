@@ -134,10 +134,15 @@ class IsoDDEPipeline:
             is_lig = merged.is_ligand.unsqueeze(0).to(device)
             affinity = float(self.affinity_head(pair, best_coords, is_lig, mask).item())
 
+            # 5. Predict interface contacts
+            contact_logits = self.structure_model.interface_contact_head(pair, mask)
+            contact_probs = torch.sigmoid(contact_logits).squeeze(0)  # (N, N)
+
         return {
             "predicted_coords": best_coords.squeeze(0).tolist(),
             "pLDDT": sample_out["best_score"],
             "ptm": sample_out["best_ptm"],
             "binding_affinity_pkd": affinity,
             "pockets": pocket_out["pockets"][0],
+            "interface_contact_probs": contact_probs.tolist(),
         }

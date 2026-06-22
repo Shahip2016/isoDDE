@@ -133,8 +133,18 @@ def main(args_list: List[str] = None) -> int:
         "binding_affinity_pkd": results["binding_affinity_pkd"],
         "pockets_detected": len(results["pockets"]),
         "pockets_info": results["pockets"],
+        "interface_contact_probs": results["interface_contact_probs"],
     }
     save_prediction_json(metrics_data, json_out)
+
+    # Count high-confidence interface contacts
+    num_contacts = 0
+    probs_list = results["interface_contact_probs"]
+    N = len(probs_list)
+    for i in range(N):
+        for j in range(i + 1, N):
+            if probs_list[i][j] > 0.5:
+                num_contacts += 1
 
     print("\n" + "=" * 50)
     print("IsoDDE Prediction Completed Successfully!")
@@ -146,6 +156,7 @@ def main(args_list: List[str] = None) -> int:
     print(f"Predicted pTM:       {results['ptm']:.4f}")
     print(f"Predicted Affinity:  {results['binding_affinity_pkd']:.4f} pKd")
     print(f"Pockets Identified:  {len(results['pockets'])}")
+    print(f"Interface Contacts:  {num_contacts}")
     print("=" * 50)
 
     return 0

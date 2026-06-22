@@ -101,6 +101,17 @@ class PocketConfig:
 
 
 @dataclass
+class InterfaceContactConfig:
+    """Configuration for the interface contact prediction head."""
+
+    hidden_dim: int = 256
+    num_layers: int = 3
+    num_heads: int = 8
+    dropout: float = 0.1
+    contact_threshold_angstrom: float = 8.0
+
+
+@dataclass
 class DataConfig:
     """Configuration for input data processing."""
 
@@ -141,6 +152,7 @@ class IsoDDEConfig:
     confidence: ConfidenceConfig = field(default_factory=ConfidenceConfig)
     affinity: AffinityConfig = field(default_factory=AffinityConfig)
     pocket: PocketConfig = field(default_factory=PocketConfig)
+    interface_contact: InterfaceContactConfig = field(default_factory=InterfaceContactConfig)
     data: DataConfig = field(default_factory=DataConfig)
     inference: InferenceConfig = field(default_factory=InferenceConfig)
 
@@ -181,5 +193,6 @@ class IsoDDEConfig:
             ),
             affinity=AffinityConfig(hidden_dim=32, num_layers=2, num_heads=4),
             pocket=PocketConfig(hidden_dim=32, num_layers=2, num_heads=4),
+            interface_contact=InterfaceContactConfig(hidden_dim=32, num_layers=2, num_heads=4),
             data=DataConfig(max_protein_length=128, crop_size=64),
         )

@@ -19,6 +19,7 @@ from isodde.model.pairformer import Pairformer
 from isodde.model.diffusion import DiffusionModule
 from isodde.model.confidence import ConfidenceHead
 from isodde.model.interface_contact import InterfaceContactHead
+from isodde.model.protein_ligand_contact import ProteinLigandContactHead
 from isodde.model.heads import (
     DistogramHead,
     ExperimentallyResolvedHead,
@@ -127,6 +128,10 @@ class IsoDDEStructurePrediction(nn.Module):
             config.interface_contact,
             pair_dim=config.pairformer.pair_dim,
         )
+        self.protein_ligand_contact_head = ProteinLigandContactHead(
+            config.protein_ligand_contact,
+            pair_dim=config.pairformer.pair_dim,
+        )
 
     def forward(
         self,
@@ -203,5 +208,6 @@ class IsoDDEStructurePrediction(nn.Module):
         outputs["secondary_structure_logits"] = self.secondary_structure_head(single)
         outputs["solvent_accessibility"] = self.solvent_accessibility_head(single)
         outputs["interface_contact_logits"] = self.interface_contact_head(pair, mask)
+        outputs["protein_ligand_contact_logits"] = self.protein_ligand_contact_head(pair, mask)
 
         return outputs

@@ -112,6 +112,17 @@ class InterfaceContactConfig:
 
 
 @dataclass
+class ProteinLigandContactConfig:
+    """Configuration for the protein-ligand contact prediction head."""
+
+    hidden_dim: int = 256
+    num_layers: int = 3
+    num_heads: int = 8
+    dropout: float = 0.1
+    contact_threshold_angstrom: float = 4.5
+
+
+@dataclass
 class DataConfig:
     """Configuration for input data processing."""
 
@@ -153,6 +164,7 @@ class IsoDDEConfig:
     affinity: AffinityConfig = field(default_factory=AffinityConfig)
     pocket: PocketConfig = field(default_factory=PocketConfig)
     interface_contact: InterfaceContactConfig = field(default_factory=InterfaceContactConfig)
+    protein_ligand_contact: ProteinLigandContactConfig = field(default_factory=ProteinLigandContactConfig)
     data: DataConfig = field(default_factory=DataConfig)
     inference: InferenceConfig = field(default_factory=InferenceConfig)
 
@@ -194,5 +206,6 @@ class IsoDDEConfig:
             affinity=AffinityConfig(hidden_dim=32, num_layers=2, num_heads=4),
             pocket=PocketConfig(hidden_dim=32, num_layers=2, num_heads=4),
             interface_contact=InterfaceContactConfig(hidden_dim=32, num_layers=2, num_heads=4),
+            protein_ligand_contact=ProteinLigandContactConfig(hidden_dim=32, num_layers=2, num_heads=4),
             data=DataConfig(max_protein_length=128, crop_size=64),
         )

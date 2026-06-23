@@ -134,6 +134,7 @@ def main(args_list: List[str] = None) -> int:
         "pockets_detected": len(results["pockets"]),
         "pockets_info": results["pockets"],
         "interface_contact_probs": results["interface_contact_probs"],
+        "protein_ligand_contact_probs": results["protein_ligand_contact_probs"],
     }
     save_prediction_json(metrics_data, json_out)
 
@@ -146,6 +147,15 @@ def main(args_list: List[str] = None) -> int:
             if probs_list[i][j] > 0.5:
                 num_contacts += 1
 
+    # Count high-confidence protein-ligand contacts
+    num_pl_contacts = 0
+    pl_probs_list = results["protein_ligand_contact_probs"]
+    N_pl = len(pl_probs_list)
+    for i in range(N_pl):
+        for j in range(i + 1, N_pl):
+            if pl_probs_list[i][j] > 0.5:
+                num_pl_contacts += 1
+
     print("\n" + "=" * 50)
     print("IsoDDE Prediction Completed Successfully!")
     print("=" * 50)
@@ -157,6 +167,7 @@ def main(args_list: List[str] = None) -> int:
     print(f"Predicted Affinity:  {results['binding_affinity_pkd']:.4f} pKd")
     print(f"Pockets Identified:  {len(results['pockets'])}")
     print(f"Interface Contacts:  {num_contacts}")
+    print(f"Protein-Ligand Contacts: {num_pl_contacts}")
     print("=" * 50)
 
     return 0

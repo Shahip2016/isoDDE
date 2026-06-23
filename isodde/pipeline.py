@@ -138,6 +138,10 @@ class IsoDDEPipeline:
             contact_logits = self.structure_model.interface_contact_head(pair, mask)
             contact_probs = torch.sigmoid(contact_logits).squeeze(0)  # (N, N)
 
+            # 6. Predict protein-ligand contacts
+            pl_contact_logits = self.structure_model.protein_ligand_contact_head(pair, mask)
+            pl_contact_probs = torch.sigmoid(pl_contact_logits).squeeze(0)  # (N, N)
+
         return {
             "predicted_coords": best_coords.squeeze(0).tolist(),
             "pLDDT": sample_out["best_score"],
@@ -145,4 +149,5 @@ class IsoDDEPipeline:
             "binding_affinity_pkd": affinity,
             "pockets": pocket_out["pockets"][0],
             "interface_contact_probs": contact_probs.tolist(),
+            "protein_ligand_contact_probs": pl_contact_probs.tolist(),
         }

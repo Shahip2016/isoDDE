@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IsoDDE — Isomorphic Labs Drug Design Engine</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome for Modern Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- 3Dmol.js CDN for Molecular Visualization -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://3dmol.org/build/3Dmol-min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-accent">Iso</span>DDE
+                </div>
+                <div class="subtitle">Drug Design Engine</div>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3><i class="fa-solid fa-gears"></i> Engine Settings</h3>
+                <div class="settings-form">
+                    <div class="form-group">
+                        <label for="settings-seeds">Sampling Seeds</label>
+                        <div class="slider-container">
+                            <input type="range" id="settings-seeds" min="1" max="5" value="2" step="1">
+                            <span id="seeds-val" class="badge">2</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3><i class="fa-solid fa-flask"></i> Quick Presets</h3>
+                <div class="presets-list">
+                    <button class="preset-card" onclick="loadPreset('preset-kinase')">
+                        <div class="preset-title">Kinase Loop + Ligand</div>
+                        <div class="preset-desc">15 AA protein with small organic ligand</div>
+                    </button>
+                    <button class="preset-card" onclick="loadPreset('preset-gpcr')">
+                        <div class="preset-title">GPCR Cryptic Pocket</div>
+                        <div class="preset-desc">Targeting binding site sequence</div>
+                    </button>
+                    <button class="preset-card" onclick="loadPreset('preset-peptide')">
+                        <div class="preset-title">Antibody CDR Peptide</div>
+                        <div class="preset-desc">High affinity interface prediction</div>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="sidebar-section flex-grow">
+                <h3><i class="fa-solid fa-history"></i> Recent Predictions</h3>
+                <div class="history-list" id="history-list">
+                    <div class="empty-history">No recent runs</div>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="connection-status">
+                    <span class="status-dot healthy"></span>
+                    <span id="backend-status-text">Connecting to IsoDDE...</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="app-header">
+                <button class="toggle-sidebar" id="toggle-sidebar-btn" onclick="toggleSidebar()">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div class="header-title">
+                    <h1>Predictive AI Workspace</h1>
+                    <p class="description">Co-folding, Binding Affinity, and Pocket Identification from sequence alone.</p>
+                </div>
+                <div class="system-badges">
+                    <span class="system-badge"><i class="fa-solid fa-cpu"></i> Torch CPU/GPU</span>
+                </div>
+            </header>
+
+            <!-- Chat Output Container -->
+            <div class="chat-container" id="chat-container">
+                <!-- Welcome Message -->
+                <div class="message assistant welcome">
+                    <div class="message-avatar">
+                        <i class="fa-solid fa-robot"></i>
+                    </div>
+                    <div class="message-bubble">
+                        <h2>Welcome to IsoDDE Chat Client</h2>
+                        <p>I am your computational biochemistry assistant. I can run full biophysical predictions (co-folding structures, estimating binding affinity pKd, and detecting potential binding pockets) directly from amino acid sequences.</p>
+                        <p>You can use the input form below to submit a protein and ligand, or simply chat with me to guide your predictions.</p>
+                        <div class="welcome-chips">
+                            <span class="chip" onclick="submitQuickQuery('Predict kinase sequence MTEYKLVVVGAGGVGKSALTI with elements C,C,O,N')">Kinase Co-folding</span>
+                            <span class="chip" onclick="submitQuickQuery('Check pocket sites for protein MTEYKLVVVGAGGVGKSALTI')">Blind Pocket Detection</span>
+                            <span class="chip" onclick="submitQuickQuery('Run affinity analysis for sequence LQPSETDFGEK with ligand elements C,O,O')">Affinity Score (pKd)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Input Area -->
+            <div class="input-area">
+                <form class="prediction-form" id="prediction-form">
+                    <div class="form-row inputs-grid">
+                        <div class="form-group flex-3">
+                            <label for="protein-seq"><i class="fa-solid fa-dna"></i> Protein Sequence (one-letter codes)</label>
+                            <textarea id="protein-seq" rows="2" placeholder="e.g. MTEYKLVVVGAGGVGKSALTI" required></textarea>
+                        </div>
+                        <div class="form-group flex-2">
+                            <label for="ligand-atoms"><i class="fa-solid fa-atom"></i> Ligand Atoms / SMILES</label>
+                            <input type="text" id="ligand-atoms" placeholder="e.g. C,C,O,N or SMILES" value="C,C,O,N">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row submit-row">
+                        <div class="chat-input-wrapper">
+                            <input type="text" id="chat-message-input" placeholder="Ask a question or describe your prediction query...">
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="btn-submit">
+                            <span id="btn-text">Run Prediction</span>
+                            <i class="fa-solid fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <!-- Templates for Dynamic Insertion (not displayed initially) -->
+    <template id="prediction-card-template">
+        <div class="prediction-card-inner">
+            <div class="prediction-header-bar">
+                <div class="pred-title-group">
+                    <span class="pred-icon"><i class="fa-solid fa-chart-line"></i></span>
+                    <h4>Prediction Complete</h4>
+                </div>
+                <div class="pred-actions">
+                    <button class="btn btn-xs btn-outline" onclick="downloadPDB(this)"><i class="fa-solid fa-download"></i> PDB</button>
+                </div>
+            </div>
+            
+            <!-- Summary Metrics Grid -->
+            <div class="metrics-grid">
+                <div class="metric-box">
+                    <div class="metric-label">Confidence (pLDDT)</div>
+                    <div class="metric-value plddt-value">-</div>
+                    <div class="progress-bar-bg"><div class="progress-bar-fill plddt-fill" style="width: 0%"></div></div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Predicted pTM</div>
+                    <div class="metric-value ptm-value">-</div>
+                    <div class="progress-bar-bg"><div class="progress-bar-fill ptm-fill" style="width: 0%"></div></div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Affinity (pKd)</div>
+                    <div class="metric-value affinity-value">-</div>
+                    <div class="metric-sub">ΔG estimation</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Pockets Detected</div>
+                    <div class="metric-value pockets-count-value">-</div>
+                    <div class="metric-sub">Ligandable sites</div>
+                </div>
+            </div>
+
+            <!-- Tabs Navigation -->
+            <div class="tabs-nav">
+                <button class="tab-btn active" data-tab="tab-3d" onclick="switchTab(this, 'tab-3d')"><i class="fa-solid fa-cube"></i> 3D Structure</button>
+                <button class="tab-btn" data-tab="tab-pockets" onclick="switchTab(this, 'tab-pockets')"><i class="fa-solid fa-circle-nodes"></i> Pockets</button>
+                <button class="tab-btn" data-tab="tab-contacts" onclick="switchTab(this, 'tab-contacts')"><i class="fa-solid fa-table-cells"></i> Contact Map</button>
+            </div>
+
+            <!-- Tabs Content -->
+            <div class="tabs-content">
+                <!-- 3D Structure Viewer Tab -->
+                <div class="tab-pane active" id="tab-3d">
+                    <div class="viewer-container">
+                        <div class="viewer-canvas" id="mol-viewer-container" style="height: 380px; width: 100%; position: relative;"></div>
+                        <div class="viewer-controls">
+                            <span class="control-label">Representations:</span>
+                            <button class="btn btn-xs active" onclick="setMolStyle(this, 'cartoon')">Cartoon</button>
+                            <button class="btn btn-xs" onclick="setMolStyle(this, 'stick')">Stick</button>
+                            <button class="btn btn-xs" onclick="setMolStyle(this, 'sphere')">Sphere</button>
+                            <span class="divider">|</span>
+                            <button class="btn btn-xs" onclick="recenterViewer(this)"><i class="fa-solid fa-arrows-to-eye"></i> Recenter</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pockets Tab -->
+                <div class="tab-pane" id="tab-pockets">
+                    <div class="pockets-container">
+                        <div class="table-responsive">
+                            <table class="pockets-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Center (X, Y, Z)</th>
+                                        <th>Radius (Å)</th>
+                                        <th>Ligandability Score</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="pockets-table-body">
+                                    <tr>
+                                        <td colspan="5" style="text-align: center;">No pockets found</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact Map Tab -->
+                <div class="tab-pane" id="tab-contacts">
+                    <div class="contacts-container">
+                        <div class="heatmap-flex">
+                            <div class="heatmap-wrapper">
+                                <h5>Interface Contact Map</h5>
+                                <canvas class="contact-canvas interface-canvas" width="220" height="220"></canvas>
+                                <div class="canvas-legend">Residue Index (N x N)</div>
+                            </div>
+                            <div class="heatmap-wrapper">
+                                <h5>Protein-Ligand Contact Map</h5>
+                                <canvas class="contact-canvas pl-canvas" width="220" height="220"></canvas>
+                                <div class="canvas-legend">Residue ↔ Ligand Atoms</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+    
+    <!-- Script -->
+    <script src="app.js"></script>
+</body>
+</html>

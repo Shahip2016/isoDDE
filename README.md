@@ -57,6 +57,21 @@ print(f"Pockets Identified:       {len(results['pockets'])}")
 py -m isodde.cli --sequence MTEYKLVVVGAGGVGKSALTI --ligand C,C,O,N --output-dir predictions --num-seeds 3
 ```
 
+### Web Chat UI Interface
+
+IsoDDE includes an interactive web-based Chat UI to visualize protein-ligand complexes, pockets, and contact probability maps:
+
+```bash
+# Start the web UI server
+py -m isodde.cli --web
+```
+
+Once started, open [http://localhost:8000](http://localhost:8000) in your web browser. Features include:
+- **Interactive Chat Interface** to submit prediction requests.
+- **3D Molecular Visualization** of the co-folded complex via `3Dmol.js`.
+- **Blind Pocket Detection Viewer** to interactively highlight pocket centers, zones, and scores.
+- **Contact Map Heatmaps** to view residue-level interface contacts and protein-ligand contact matrices.
+
 ## Tests
 
 You can run the full test suite using the Python Launcher (`py`):

@@ -52,12 +52,39 @@ def main(args_list: List[str] = None) -> int:
         action="store_true",
         help="Use a small model configuration for faster processing.",
     )
+    parser.add_argument(
+        "--web",
+        action="store_true",
+        help="Launch the interactive web UI server.",
+    )
+    parser.add_argument(
+        "--host",
+        type=str,
+        default="127.0.0.1",
+        help="Host address to bind the web server (default: 127.0.0.1).",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="Port number to run the web server on (default: 8000).",
+    )
 
     args = parser.parse_args(args_list)
 
+    if args.web:
+        import uvicorn
+        from isodde.web import app
+        print("\n" + "=" * 50)
+        print(f"Starting IsoDDE Web UI server at http://{args.host}:{args.port}")
+        print("Press Ctrl+C to stop.")
+        print("=" * 50 + "\n")
+        uvicorn.run(app, host=args.host, port=args.port)
+        return 0
+
     if not args.sequence and not args.pdb:
         parser.print_help()
-        print("\n[Error] Must specify either --sequence or --pdb input.")
+        print("\n[Error] Must specify either --sequence, --pdb, or --web.")
         return 1
 
     # Load sequence and initial coordinates

@@ -471,28 +471,93 @@ function downloadPDB(btn) {
     URL.revokeObjectURL(url);
 }
 
-// --- Stubs for Commit 5 (Molecular Viewer and Canvas Heatmaps) ---
+// --- 3D Viewer, Pocket Focusing, and Heatmaps Implementation ---
 function init3DViewer(cardId, containerId, pdbContent, protLen, ligLen) {
-    console.log("3D viewer initialized for stub: ", containerId);
     const container = document.getElementById(containerId);
-    container.innerHTML = `
-        <div style="padding: 40px; text-align: center; color: var(--text-secondary);">
-            <i class="fa-solid fa-cube fa-3x" style="color: var(--color-primary); margin-bottom: 12px;"></i>
-            <p>Molecular viewer placeholder (Ready to render in Commit 5)</p>
-        </div>
-    `;
+    if (!container) return;
+    container.innerHTML = ''; // Clear stub
+
+    try {
+        // Initialize 3Dmol.js viewer
+        let viewer = $3Dmol.createViewer($(container), {
+            backgroundColor: '#05070a'
+        });
+        
+        // Cache the viewer instance
+        state.activeViewers.set(cardId, viewer);
+        state.activeViewerStyles.set(cardId, 'cartoon');
+
+        // Load PDB data
+        viewer.addModel(pdbContent, "pdb");
+        
+        // Apply representation styles
+        applyViewerStyle(cardId, 'cartoon');
+        
+        viewer.zoomTo();
+        viewer.render();
+    } catch (e) {
+        console.error("Failed to initialize 3Dmol viewer:", e);
+        container.innerHTML = `
+            <div style="padding: 40px; text-align: center; color: var(--text-error);">
+                <i class="fa-solid fa-triangle-exclamation fa-2x"></i>
+                <p style="margin-top: 8px;">3D Viewer failed to load.</p>
+            </div>
+        `;
+    }
+}
+
+function applyViewerStyle(cardId, styleName) {
+    const viewer = state.activeViewers.get(cardId);
+    if (!viewer) return;
+    
+    const card = document.getElementById(cardId);
+    if (!card) return;
+    const protLen = parseInt(card.getAttribute('data-seq-len') || 0);
+    const totalLen = protLen + parseInt(card.getAttribute('data-lig-len') || 0);
+    
+    viewer.setStyle({}, {}); // Clear current style
+    
+    // Select residues (1-indexed based on write_coords_to_pdb)
+    const protSelection = { resi: Array.from({ length: protLen }, (_, i) => i + 1) };
+    const ligSelection = { resi: Array.from({ length: totalLen - protLen }, (_, i) => protLen + i + 1) };
+
+    if (styleName === 'cartoon') {
+        viewer.setStyle(protSelection, { cartoon: { color: 'spectrum' } });
+        viewer.setStyle(ligSelection, { stick: { colorscheme: 'cyanCarbon', radius: 0.35 }, sphere: { scale: 0.3 } });
+    } else if (styleName === 'stick') {
+        viewer.setStyle(protSelection, { stick: { colorscheme: 'Jmol', radius: 0.15 } });
+        viewer.setStyle(ligSelection, { stick: { colorscheme: 'cyanCarbon', radius: 0.35 }, sphere: { scale: 0.3 } });
+    } else if (styleName === 'sphere') {
+        viewer.setStyle(protSelection, { sphere: { colorscheme: 'Jmol', scale: 0.9 } });
+        viewer.setStyle(ligSelection, { sphere: { colorscheme: 'cyanCarbon', scale: 1.0 } });
+    }
+    
+    viewer.render();
 }
 
 function setMolStyle(btn, styleName) {
-    // Style switching stub
+    const card = btn.closest('.prediction-card-inner');
+    if (!card) return;
+    const cardId = card.id;
+    
     const controls = btn.parentNode;
     controls.querySelectorAll('button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    console.log("Switching style to:", styleName);
+    
+    state.activeViewerStyles.set(cardId, styleName);
+    applyViewerStyle(cardId, styleName);
 }
 
 function recenterViewer(btn) {
-    console.log("Recentering viewer");
+    const card = btn.closest('.prediction-card-inner');
+    if (!card) return;
+    const cardId = card.id;
+    const viewer = state.activeViewers.get(cardId);
+    if (viewer) {
+        viewer.removeAllShapes(); // clear pocket highlights on recenter
+        viewer.zoomTo();
+        viewer.render();
+    }
 }
 
 function renderPocketsTable(cardRoot, pockets, cardId) {
@@ -509,7 +574,7 @@ function renderPocketsTable(cardRoot, pockets, cardId) {
             <td>${pocket.radius.toFixed(1)} Å</td>
             <td><span class="badge">${pocket.score.toFixed(3)}</span></td>
             <td>
-                <button class="btn btn-xs" onclick="focusPocket('${cardId}', ${idx})">
+                <button class="btn btn-xs btn-outline" onclick="focusPocket('${cardId}', ${idx})">
                     <i class="fa-solid fa-crosshairs"></i> View
                 </button>
             </td>
@@ -518,23 +583,102 @@ function renderPocketsTable(cardRoot, pockets, cardId) {
 }
 
 function focusPocket(cardId, pocketIdx) {
-    console.log("Focusing pocket", pocketIdx, "on card", cardId);
+    const viewer = state.activeViewers.get(cardId);
+    if (!viewer) return;
+    
+    // Clear any previous shapes
+    viewer.removeAllShapes();
+    
+    // Find pocket coordinates in loaded history
+    const baseId = cardId.replace('-reload', '');
+    const historyItem = state.history.find(h => h.id === baseId || h.id + '-reload' === cardId);
+    if (!historyItem || !historyItem.data.pockets[pocketIdx]) return;
+    
+    const pocket = historyItem.data.pockets[pocketIdx];
+    const center = { x: pocket.center[0], y: pocket.center[1], z: pocket.center[2] };
+    const radius = pocket.radius;
+    
+    // Add transparent pocket sphere highlight
+    viewer.addSphere({
+        center: center,
+        radius: radius,
+        color: 'orange',
+        alpha: 0.45,
+        wireframe: false
+    });
+    
+    // Zoom in on the pocket zone
+    viewer.zoomTo({ center: center }, 800);
+    viewer.render();
+    
+    addAssistantMessage(`Focused viewer on Pocket ${pocketIdx+1} (Center: [${pocket.center.map(c => c.toFixed(1)).join(', ')}], Radius: ${radius.toFixed(1)}Å, Score: ${pocket.score.toFixed(3)}). Zone sphere is highlighted in orange.`);
 }
 
 function renderContactHeatmaps(cardRoot, data) {
-    console.log("Rendering contact heatmaps stub");
-    // Placeholders in canvas
     const canvasInt = cardRoot.querySelector('.interface-canvas');
     const canvasPl = cardRoot.querySelector('.pl-canvas');
     
-    [canvasInt, canvasPl].forEach(canvas => {
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#0f1524';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.font = '10px Outfit';
-        ctx.fillStyle = '#6b7280';
-        ctx.textAlign = 'center';
-        ctx.fillText('Canvas Heatmap Stub (Commit 5)', canvas.width / 2, canvas.height / 2);
-    });
+    // 1. Render Interface Contacts Heatmap
+    if (canvasInt && data.interface_contact_probs) {
+        const ctx = canvasInt.getContext('2d');
+        const N = data.interface_contact_probs.length;
+        const w = canvasInt.width;
+        const h = canvasInt.height;
+        ctx.fillStyle = '#05070a';
+        ctx.fillRect(0, 0, w, h);
+        
+        if (N > 0) {
+            const cellSize = w / N;
+            for (let i = 0; i < N; i++) {
+                for (let j = 0; j < N; j++) {
+                    const prob = data.interface_contact_probs[i][j];
+                    if (prob > 0.05) {
+                        // Blend cyan based on contact probability
+                        ctx.fillStyle = `rgba(0, 242, 254, ${prob.toFixed(3)})`;
+                        ctx.fillRect(i * cellSize, j * cellSize, cellSize, cellSize);
+                    }
+                }
+            }
+        }
+    }
+    
+    // 2. Render Protein-Ligand Contacts Heatmap
+    if (canvasPl) {
+        const ctx = canvasPl.getContext('2d');
+        const w = canvasPl.width;
+        const h = canvasPl.height;
+        ctx.fillStyle = '#05070a';
+        ctx.fillRect(0, 0, w, h);
+        
+        const protLen = data.protein_length;
+        const ligLen = data.ligand_length;
+        
+        if (ligLen === 0) {
+            ctx.fillStyle = '#6b7280';
+            ctx.font = '11px Outfit';
+            ctx.textAlign = 'center';
+            ctx.fillText('No Ligand Configured', w / 2, h / 2);
+            return;
+        }
+        
+        if (data.protein_ligand_contact_probs && protLen > 0) {
+            const cellW = w / ligLen;
+            const cellH = h / protLen;
+            
+            for (let r = 0; r < protLen; r++) {
+                for (let c = 0; c < ligLen; c++) {
+                    const globalColIdx = protLen + c;
+                    if (globalColIdx < data.protein_ligand_contact_probs[r].length) {
+                        const prob = data.protein_ligand_contact_probs[r][globalColIdx];
+                        if (prob > 0.05) {
+                            // Blend neon blue/purple based on probability
+                            ctx.fillStyle = `rgba(79, 172, 254, ${prob.toFixed(3)})`;
+                            ctx.fillRect(c * cellW, r * cellH, cellW, cellH);
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
+

@@ -26,9 +26,12 @@ def test_pipeline_integration():
     assert "ptm" in results
     assert "binding_affinity_pkd" in results
     assert "pockets" in results
+    assert "secondary_structure" in results
 
     assert len(results["predicted_coords"]) == len(protein_seq) + len(ligand_elements)
     assert isinstance(results["pLDDT"], float)
     assert isinstance(results["ptm"], float)
     assert isinstance(results["binding_affinity_pkd"], float)
     assert isinstance(results["pockets"], list)
+    assert isinstance(results["secondary_structure"], list)
+    assert len(results["secondary_structure"]) == len(protein_seq)

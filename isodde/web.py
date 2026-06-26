@@ -69,6 +69,7 @@ class PredictionResponse(BaseModel):
     protein_ligand_contact_probs: List[List[float]]
     pdb_content: str
     sdf_content: Optional[str] = None
+    secondary_structure: Optional[List[int]] = None
     protein_length: int
     ligand_length: int
     elements: List[str]
@@ -199,6 +200,7 @@ def predict(request: PredictionRequest) -> Dict[str, Any]:
         "protein_ligand_contact_probs": results["protein_ligand_contact_probs"],
         "pdb_content": pdb_content,
         "sdf_content": sdf_content,
+        "secondary_structure": results.get("secondary_structure"),
         "protein_length": len(protein_seq),
         "ligand_length": len(ligand_elements) if ligand_elements else 0,
         "elements": full_elements

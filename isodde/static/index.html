@@ -182,12 +182,27 @@
             <!-- Tabs Navigation -->
             <div class="tabs-nav">
                 <button class="tab-btn active" data-tab="tab-3d" onclick="switchTab(this, 'tab-3d')"><i class="fa-solid fa-cube"></i> 3D Structure</button>
+                <button class="tab-btn" data-tab="tab-residues" onclick="switchTab(this, 'tab-residues')"><i class="fa-solid fa-dna"></i> Sequence & Heads</button>
                 <button class="tab-btn" data-tab="tab-pockets" onclick="switchTab(this, 'tab-pockets')"><i class="fa-solid fa-circle-nodes"></i> Pockets</button>
                 <button class="tab-btn" data-tab="tab-contacts" onclick="switchTab(this, 'tab-contacts')"><i class="fa-solid fa-table-cells"></i> Contact Map</button>
             </div>
 
             <!-- Tabs Content -->
             <div class="tabs-content">
+                <!-- Residues Tab -->
+                <div class="tab-pane" id="tab-residues">
+                    <div class="residues-container" style="padding: 12px; max-height: 380px; overflow-y: auto;">
+                        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px;">Residue-level predictions: Secondary Structure (H=Helix, E=Beta Sheet, C=Coil).</p>
+                        <div class="sequence-legend" style="display: flex; gap: 15px; margin-bottom: 10px; font-size: 0.8rem; flex-wrap: wrap;">
+                            <span><i class="fa-solid fa-circle" style="color: #ff7675;"></i> Helix (H)</span>
+                            <span><i class="fa-solid fa-circle" style="color: #ffeaa7;"></i> Beta Sheet (E)</span>
+                            <span><i class="fa-solid fa-circle" style="color: #a29bfe;"></i> Coil/Loop (C)</span>
+                        </div>
+                        <div class="residues-grid" style="display: flex; flex-wrap: wrap; gap: 6px; font-family: 'Fira Code', monospace;">
+                            <!-- Residues will be populated dynamically -->
+                        </div>
+                    </div>
+                </div>
                 <!-- 3D Structure Viewer Tab -->
                 <div class="tab-pane active" id="tab-3d">
                     <div class="viewer-container">

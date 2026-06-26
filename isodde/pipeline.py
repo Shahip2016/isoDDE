@@ -142,6 +142,11 @@ class IsoDDEPipeline:
             pl_contact_logits = self.structure_model.protein_ligand_contact_head(pair, mask)
             pl_contact_probs = torch.sigmoid(pl_contact_logits).squeeze(0)  # (N, N)
 
+            # 7. Predict secondary structure
+            ss_logits = self.structure_model.secondary_structure_head(single)
+            ss_pred = torch.argmax(ss_logits, dim=-1).squeeze(0)  # (N,)
+            ss_list = ss_pred[:len(protein_sequence)].tolist()
+
         return {
             "predicted_coords": best_coords.squeeze(0).tolist(),
             "pLDDT": sample_out["best_score"],
@@ -150,4 +155,5 @@ class IsoDDEPipeline:
             "pockets": pocket_out["pockets"][0],
             "interface_contact_probs": contact_probs.tolist(),
             "protein_ligand_contact_probs": pl_contact_probs.tolist(),
+            "secondary_structure": ss_list,
         }

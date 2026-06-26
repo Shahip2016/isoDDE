@@ -418,18 +418,21 @@ function appendPredictionResultCard(cardId, data, seq, ligand) {
     cardRoot.querySelector('#mol-viewer-container').id = viewerId;
     
     const tab3d = cardRoot.querySelector('#tab-3d');
+    const tabResidues = cardRoot.querySelector('#tab-residues');
     const tabPockets = cardRoot.querySelector('#tab-pockets');
     const tabContacts = cardRoot.querySelector('#tab-contacts');
     
     tab3d.id = `tab-3d-${cardId}`;
+    tabResidues.id = `tab-residues-${cardId}`;
     tabPockets.id = `tab-pockets-${cardId}`;
     tabContacts.id = `tab-contacts-${cardId}`;
     
     // Update tab-buttons triggers
     const tabBtns = cardRoot.querySelectorAll('.tab-btn');
     tabBtns[0].setAttribute('onclick', `switchTab(this, 'tab-3d-${cardId}')`);
-    tabBtns[1].setAttribute('onclick', `switchTab(this, 'tab-pockets-${cardId}')`);
-    tabBtns[2].setAttribute('onclick', `switchTab(this, 'tab-contacts-${cardId}')`);
+    tabBtns[1].setAttribute('onclick', `switchTab(this, 'tab-residues-${cardId}')`);
+    tabBtns[2].setAttribute('onclick', `switchTab(this, 'tab-pockets-${cardId}')`);
+    tabBtns[3].setAttribute('onclick', `switchTab(this, 'tab-contacts-${cardId}')`);
     
     // Populate simple metrics
     cardRoot.querySelector('.plddt-value').textContent = `${(data.pLDDT * 100).toFixed(1)}%`;
@@ -454,10 +457,62 @@ function appendPredictionResultCard(cardId, data, seq, ligand) {
     
     // Trigger structural and contact renders
     init3DViewer(cardId, viewerId, data.pdb_content, data.protein_length, data.ligand_length);
+    renderResidues(cardRoot, seq, data);
     renderPocketsTable(cardRoot, data.pockets, cardId);
     renderContactHeatmaps(cardRoot, data);
     
     scrollToBottom();
+}
+
+// Render residue sequence & heads
+function renderResidues(cardRoot, seq, data) {
+    const grid = cardRoot.querySelector('.residues-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    
+    const ss = data.secondary_structure || [];
+    
+    const ssLetters = ['H', 'E', 'C'];
+    const ssNames = ['Helix', 'Beta Sheet', 'Coil/Loop'];
+    const ssColors = ['#ff7675', '#ffeaa7', '#a29bfe'];
+    
+    for (let i = 0; i < seq.length; i++) {
+        const residueChar = seq[i];
+        const resSS = ss[i] !== undefined ? ss[i] : 2;
+        
+        const resEl = document.createElement('div');
+        resEl.className = 'residue-item';
+        resEl.style.display = 'flex';
+        resEl.style.flexDirection = 'column';
+        resEl.style.alignItems = 'center';
+        resEl.style.justifyContent = 'center';
+        resEl.style.width = '38px';
+        resEl.style.height = '48px';
+        resEl.style.border = '1px solid var(--border-color)';
+        resEl.style.borderRadius = '4px';
+        resEl.style.fontSize = '0.8rem';
+        resEl.style.position = 'relative';
+        resEl.style.cursor = 'default';
+        resEl.style.backgroundColor = ssColors[resSS] + '15';
+        resEl.style.borderColor = ssColors[resSS];
+        
+        resEl.title = `Residue ${i + 1}: ${residueChar}\nSS: ${ssNames[resSS]} (${ssLetters[resSS]})`;
+        
+        const charSpan = document.createElement('span');
+        charSpan.textContent = residueChar;
+        charSpan.style.fontWeight = 'bold';
+        charSpan.style.color = 'var(--text-primary)';
+        resEl.appendChild(charSpan);
+        
+        const ssSpan = document.createElement('span');
+        ssSpan.textContent = ssLetters[resSS];
+        ssSpan.style.fontSize = '0.65rem';
+        ssSpan.style.color = ssColors[resSS];
+        ssSpan.style.marginTop = '2px';
+        resEl.appendChild(ssSpan);
+        
+        grid.appendChild(resEl);
+    }
 }
 
 // Download PDB helper

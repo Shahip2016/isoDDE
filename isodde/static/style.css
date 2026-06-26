@@ -702,7 +702,7 @@ textarea {
 /* Metrics Grid inside Card */
 .metrics-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
     border-bottom: 1px solid var(--border-color);
 }
 

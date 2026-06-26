@@ -29,6 +29,7 @@ def test_pipeline_integration():
     assert "secondary_structure" in results
     assert "solvent_accessibility" in results
     assert "plddt_list" in results
+    assert "quality_report" in results
 
     assert len(results["predicted_coords"]) == len(protein_seq) + len(ligand_elements)
     assert isinstance(results["pLDDT"], float)
@@ -41,3 +42,6 @@ def test_pipeline_integration():
     assert len(results["solvent_accessibility"]) == len(protein_seq)
     assert isinstance(results["plddt_list"], list)
     assert len(results["plddt_list"]) == len(protein_seq)
+    assert isinstance(results["quality_report"], dict)
+    assert "bond_violations" in results["quality_report"]
+    assert "clashes" in results["quality_report"]

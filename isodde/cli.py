@@ -187,6 +187,7 @@ def main(args_list: List[str] = None) -> int:
         "pockets_info": results["pockets"],
         "interface_contact_probs": results["interface_contact_probs"],
         "protein_ligand_contact_probs": results["protein_ligand_contact_probs"],
+        "quality_report": results.get("quality_report"),
     }
     save_prediction_json(metrics_data, json_out)
 
@@ -208,6 +209,8 @@ def main(args_list: List[str] = None) -> int:
             if pl_probs_list[i][j] > 0.5:
                 num_pl_contacts += 1
 
+    qr = results.get("quality_report", {})
+
     print("\n" + "=" * 50)
     print("IsoDDE Prediction Completed Successfully!")
     print("=" * 50)
@@ -220,6 +223,11 @@ def main(args_list: List[str] = None) -> int:
     print(f"Pockets Identified:  {len(results['pockets'])}")
     print(f"Interface Contacts:  {num_contacts}")
     print(f"Protein-Ligand Contacts: {num_pl_contacts}")
+    print("-" * 50)
+    print("Stereochemical Quality Report:")
+    print(f"  Bond Violations:   {qr.get('bond_violations', 0)}")
+    print(f"  Max Deviation:     {qr.get('max_bond_deviation', 0.0):.4f} Å")
+    print(f"  Steric Clashes:    {qr.get('clashes', 0)}")
     print("=" * 50)
 
     return 0

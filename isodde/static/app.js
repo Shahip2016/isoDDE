@@ -444,6 +444,19 @@ function appendPredictionResultCard(cardId, data, seq, ligand) {
     cardRoot.querySelector('.affinity-value').textContent = `${data.binding_affinity_pkd.toFixed(2)} pKd`;
     cardRoot.querySelector('.pockets-count-value').textContent = `${data.pockets.length}`;
     
+    const qr = data.quality_report || {};
+    const totalViolations = (qr.bond_violations || 0) + (qr.clashes || 0);
+    const qualityEl = cardRoot.querySelector('.quality-value');
+    if (qualityEl) {
+        qualityEl.textContent = totalViolations === 0 ? 'Passed' : `${totalViolations} Devs`;
+        qualityEl.parentNode.title = `Bond Length Violations: ${qr.bond_violations || 0}\nSteric Clashes: ${qr.clashes || 0}`;
+        if (totalViolations > 0) {
+            qualityEl.style.color = '#ef4444'; // Red color for errors
+        } else {
+            qualityEl.style.color = '#10b981'; // Green color for Passed
+        }
+    }
+    
     // Store PDB content as attributes
     cardRoot.setAttribute('data-pdb', data.pdb_content);
     cardRoot.setAttribute('data-seq-len', data.protein_length);

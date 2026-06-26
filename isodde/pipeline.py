@@ -154,6 +154,32 @@ class IsoDDEPipeline:
             # 9. Extract residue plddt list
             plddt_list = sample_out["best_plddt"].squeeze(0)[:len(protein_sequence)].tolist()
 
+            # 10. Perform stereochemical quality checks
+            from isodde.evaluation.violations import check_bond_lengths, check_clashes
+            bonds_list = []
+            for idx in range(len(protein_sequence) - 1):
+                bonds_list.append((idx, idx + 1, "SINGLE"))
+            if ligand_elements:
+                offset = len(protein_sequence)
+                for idx in range(len(ligand_elements) - 1):
+                    bonds_list.append((offset + idx, offset + idx + 1, "SINGLE"))
+            
+            # Convert to torch tensor
+            if isinstance(best_coords, torch.Tensor):
+                best_coords_tensor = best_coords.clone().detach().squeeze(0)
+            else:
+                best_coords_tensor = torch.tensor(best_coords).squeeze(0)
+            is_ligand_tensor = merged.is_ligand.to(device)
+            
+            bond_check = check_bond_lengths(best_coords_tensor, bonds_list, full_elements)
+            clash_check = check_clashes(best_coords_tensor, full_elements, bonds_list, is_ligand_tensor)
+            
+            quality_report = {
+                "bond_violations": bond_check["num_violations"],
+                "max_bond_deviation": bond_check["max_deviation"],
+                "clashes": clash_check["num_intra_clashes"] + clash_check["num_inter_clashes"],
+            }
+
         return {
             "predicted_coords": best_coords.squeeze(0).tolist(),
             "pLDDT": sample_out["best_score"],
@@ -165,4 +191,5 @@ class IsoDDEPipeline:
             "secondary_structure": ss_list,
             "solvent_accessibility": rsa_list,
             "plddt_list": plddt_list,
+            "quality_report": quality_report,
         }

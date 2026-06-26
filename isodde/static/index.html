@@ -213,6 +213,14 @@
                             <button class="btn btn-xs" onclick="setMolStyle(this, 'stick')">Stick</button>
                             <button class="btn btn-xs" onclick="setMolStyle(this, 'sphere')">Sphere</button>
                             <span class="divider">|</span>
+                            <span class="control-label">Color:</span>
+                            <select class="select-xs select-color-mode" onchange="setMolColorMode(this)" style="background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 4px; font-size: 0.75rem;">
+                                <option value="chain">Chain</option>
+                                <option value="plddt">pLDDT Confidence</option>
+                                <option value="ss">Secondary Structure</option>
+                                <option value="rsa">Solvent Accessibility</option>
+                            </select>
+                            <span class="divider">|</span>
                             <button class="btn btn-xs" onclick="recenterViewer(this)"><i class="fa-solid fa-arrows-to-eye"></i> Recenter</button>
                         </div>
                     </div>

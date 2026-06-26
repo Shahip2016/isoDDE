@@ -151,6 +151,9 @@ class IsoDDEPipeline:
             rsa_tensor = self.structure_model.solvent_accessibility_head(single).squeeze(0)  # (N,)
             rsa_list = rsa_tensor[:len(protein_sequence)].tolist()
 
+            # 9. Extract residue plddt list
+            plddt_list = sample_out["best_plddt"].squeeze(0)[:len(protein_sequence)].tolist()
+
         return {
             "predicted_coords": best_coords.squeeze(0).tolist(),
             "pLDDT": sample_out["best_score"],
@@ -161,4 +164,5 @@ class IsoDDEPipeline:
             "protein_ligand_contact_probs": pl_contact_probs.tolist(),
             "secondary_structure": ss_list,
             "solvent_accessibility": rsa_list,
+            "plddt_list": plddt_list,
         }

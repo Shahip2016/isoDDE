@@ -448,6 +448,9 @@ function appendPredictionResultCard(cardId, data, seq, ligand) {
     cardRoot.setAttribute('data-pdb', data.pdb_content);
     cardRoot.setAttribute('data-seq-len', data.protein_length);
     cardRoot.setAttribute('data-lig-len', data.ligand_length);
+    cardRoot.setAttribute('data-plddt', JSON.stringify(data.plddt_list || []));
+    cardRoot.setAttribute('data-ss', JSON.stringify(data.secondary_structure || []));
+    cardRoot.setAttribute('data-rsa', JSON.stringify(data.solvent_accessibility || []));
     
     if (data.sdf_content) {
         cardRoot.setAttribute('data-sdf', data.sdf_content);
@@ -602,24 +605,73 @@ function applyViewerStyle(cardId, styleName) {
     const protLen = parseInt(card.getAttribute('data-seq-len') || 0);
     const totalLen = protLen + parseInt(card.getAttribute('data-lig-len') || 0);
     
+    const plddtList = JSON.parse(card.getAttribute('data-plddt') || '[]');
+    const ssList = JSON.parse(card.getAttribute('data-ss') || '[]');
+    const rsaList = JSON.parse(card.getAttribute('data-rsa') || '[]');
+    
+    const colorMode = (state.activeViewerColors && state.activeViewerColors.get(cardId)) || 'chain';
+    
     viewer.setStyle({}, {}); // Clear current style
     
-    // Select residues (1-indexed based on write_coords_to_pdb)
-    const protSelection = { resi: Array.from({ length: protLen }, (_, i) => i + 1) };
     const ligSelection = { resi: Array.from({ length: totalLen - protLen }, (_, i) => protLen + i + 1) };
 
-    if (styleName === 'cartoon') {
-        viewer.setStyle(protSelection, { cartoon: { color: 'spectrum' } });
-        viewer.setStyle(ligSelection, { stick: { colorscheme: 'cyanCarbon', radius: 0.35 }, sphere: { scale: 0.3 } });
-    } else if (styleName === 'stick') {
-        viewer.setStyle(protSelection, { stick: { colorscheme: 'Jmol', radius: 0.15 } });
-        viewer.setStyle(ligSelection, { stick: { colorscheme: 'cyanCarbon', radius: 0.35 }, sphere: { scale: 0.3 } });
-    } else if (styleName === 'sphere') {
-        viewer.setStyle(protSelection, { sphere: { colorscheme: 'Jmol', scale: 0.9 } });
+    // Apply residue-level styles for protein
+    for (let i = 0; i < protLen; i++) {
+        const resi = i + 1;
+        let color = '#a29bfe'; // default coil color
+        
+        if (colorMode === 'plddt') {
+            const plddt = plddtList[i] !== undefined ? plddtList[i] : 0.8;
+            if (plddt >= 0.9) color = '#005f73';
+            else if (plddt >= 0.7) color = '#0a9396';
+            else if (plddt >= 0.5) color = '#ee9b00';
+            else color = '#ae2012';
+        } else if (colorMode === 'ss') {
+            const ss = ssList[i] !== undefined ? ssList[i] : 2;
+            const ssColors = ['#ff7675', '#ffeaa7', '#a29bfe'];
+            color = ssColors[ss];
+        } else if (colorMode === 'rsa') {
+            const rsa = rsaList[i] !== undefined ? rsaList[i] : 0.0;
+            color = rsa > 0.4 ? '#4ea8de' : '#f3a712';
+        } else {
+            // 'chain' / spectrum
+            color = 'spectrum';
+        }
+        
+        let styleObj = {};
+        if (styleName === 'cartoon') {
+            styleObj = { cartoon: { color: color } };
+        } else if (styleName === 'stick') {
+            styleObj = { stick: { color: color, radius: 0.15 } };
+        } else if (styleName === 'sphere') {
+            styleObj = { sphere: { color: color, scale: 0.9 } };
+        }
+        viewer.setStyle({ resi: resi }, styleObj);
+    }
+    
+    // Style the ligand
+    if (styleName === 'sphere') {
         viewer.setStyle(ligSelection, { sphere: { colorscheme: 'cyanCarbon', scale: 1.0 } });
+    } else {
+        viewer.setStyle(ligSelection, { stick: { colorscheme: 'cyanCarbon', radius: 0.35 }, sphere: { scale: 0.3 } });
     }
     
     viewer.render();
+}
+
+function setMolColorMode(selectEl) {
+    const card = selectEl.closest('.prediction-card-inner');
+    if (!card) return;
+    const cardId = card.id;
+    const colorMode = selectEl.value;
+    
+    if (!state.activeViewerColors) {
+        state.activeViewerColors = new Map();
+    }
+    state.activeViewerColors.set(cardId, colorMode);
+    
+    const styleName = state.activeViewerStyles.get(cardId) || 'cartoon';
+    applyViewerStyle(cardId, styleName);
 }
 
 function setMolStyle(btn, styleName) {

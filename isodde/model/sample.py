@@ -168,5 +168,6 @@ def sample_multi_seed(
         "best_seed": best_result["seed"],
         "best_ptm": best_result["ptm"],
         "best_iptm": best_result["iptm"],
+        "best_plddt": best_result["plddt"],
         "all_results": all_results,
     }

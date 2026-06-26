@@ -147,6 +147,10 @@ class IsoDDEPipeline:
             ss_pred = torch.argmax(ss_logits, dim=-1).squeeze(0)  # (N,)
             ss_list = ss_pred[:len(protein_sequence)].tolist()
 
+            # 8. Predict solvent accessibility
+            rsa_tensor = self.structure_model.solvent_accessibility_head(single).squeeze(0)  # (N,)
+            rsa_list = rsa_tensor[:len(protein_sequence)].tolist()
+
         return {
             "predicted_coords": best_coords.squeeze(0).tolist(),
             "pLDDT": sample_out["best_score"],
@@ -156,4 +160,5 @@ class IsoDDEPipeline:
             "interface_contact_probs": contact_probs.tolist(),
             "protein_ligand_contact_probs": pl_contact_probs.tolist(),
             "secondary_structure": ss_list,
+            "solvent_accessibility": rsa_list,
         }

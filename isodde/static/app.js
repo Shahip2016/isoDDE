@@ -471,6 +471,7 @@ function renderResidues(cardRoot, seq, data) {
     grid.innerHTML = '';
     
     const ss = data.secondary_structure || [];
+    const rsa = data.solvent_accessibility || [];
     
     const ssLetters = ['H', 'E', 'C'];
     const ssNames = ['Helix', 'Beta Sheet', 'Coil/Loop'];
@@ -479,6 +480,7 @@ function renderResidues(cardRoot, seq, data) {
     for (let i = 0; i < seq.length; i++) {
         const residueChar = seq[i];
         const resSS = ss[i] !== undefined ? ss[i] : 2;
+        const resRSA = rsa[i] !== undefined ? rsa[i] : 0.0;
         
         const resEl = document.createElement('div');
         resEl.className = 'residue-item';
@@ -496,7 +498,7 @@ function renderResidues(cardRoot, seq, data) {
         resEl.style.backgroundColor = ssColors[resSS] + '15';
         resEl.style.borderColor = ssColors[resSS];
         
-        resEl.title = `Residue ${i + 1}: ${residueChar}\nSS: ${ssNames[resSS]} (${ssLetters[resSS]})`;
+        resEl.title = `Residue ${i + 1}: ${residueChar}\nSS: ${ssNames[resSS]} (${ssLetters[resSS]})\nRSA: ${resRSA.toFixed(2)}`;
         
         const charSpan = document.createElement('span');
         charSpan.textContent = residueChar;
@@ -510,6 +512,13 @@ function renderResidues(cardRoot, seq, data) {
         ssSpan.style.color = ssColors[resSS];
         ssSpan.style.marginTop = '2px';
         resEl.appendChild(ssSpan);
+        
+        const rsaSpan = document.createElement('span');
+        rsaSpan.textContent = resRSA.toFixed(1);
+        rsaSpan.style.fontSize = '0.6rem';
+        rsaSpan.style.color = 'var(--text-muted)';
+        rsaSpan.style.marginTop = '1px';
+        resEl.appendChild(rsaSpan);
         
         grid.appendChild(resEl);
     }

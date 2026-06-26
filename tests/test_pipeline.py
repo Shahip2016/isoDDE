@@ -27,6 +27,7 @@ def test_pipeline_integration():
     assert "binding_affinity_pkd" in results
     assert "pockets" in results
     assert "secondary_structure" in results
+    assert "solvent_accessibility" in results
 
     assert len(results["predicted_coords"]) == len(protein_seq) + len(ligand_elements)
     assert isinstance(results["pLDDT"], float)
@@ -35,3 +36,5 @@ def test_pipeline_integration():
     assert isinstance(results["pockets"], list)
     assert isinstance(results["secondary_structure"], list)
     assert len(results["secondary_structure"]) == len(protein_seq)
+    assert isinstance(results["solvent_accessibility"], list)
+    assert len(results["solvent_accessibility"]) == len(protein_seq)

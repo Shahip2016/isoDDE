@@ -70,6 +70,7 @@ class PredictionResponse(BaseModel):
     pdb_content: str
     sdf_content: Optional[str] = None
     secondary_structure: Optional[List[int]] = None
+    solvent_accessibility: Optional[List[float]] = None
     protein_length: int
     ligand_length: int
     elements: List[str]
@@ -201,6 +202,7 @@ def predict(request: PredictionRequest) -> Dict[str, Any]:
         "pdb_content": pdb_content,
         "sdf_content": sdf_content,
         "secondary_structure": results.get("secondary_structure"),
+        "solvent_accessibility": results.get("solvent_accessibility"),
         "protein_length": len(protein_seq),
         "ligand_length": len(ligand_elements) if ligand_elements else 0,
         "elements": full_elements

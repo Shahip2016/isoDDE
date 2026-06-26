@@ -446,6 +446,12 @@ function appendPredictionResultCard(cardId, data, seq, ligand) {
     cardRoot.setAttribute('data-seq-len', data.protein_length);
     cardRoot.setAttribute('data-lig-len', data.ligand_length);
     
+    if (data.sdf_content) {
+        cardRoot.setAttribute('data-sdf', data.sdf_content);
+        const sdfBtn = cardRoot.querySelector('.btn-download-sdf');
+        if (sdfBtn) sdfBtn.style.display = 'inline-block';
+    }
+    
     // Trigger structural and contact renders
     init3DViewer(cardId, viewerId, data.pdb_content, data.protein_length, data.ligand_length);
     renderPocketsTable(cardRoot, data.pockets, cardId);
@@ -465,6 +471,23 @@ function downloadPDB(btn) {
     const a = document.createElement('a');
     a.href = url;
     a.download = `isodde_complex_${Date.now()}.pdb`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+// Download SDF helper
+function downloadSDF(btn) {
+    const card = btn.closest('.prediction-card-inner');
+    const sdf = card.getAttribute('data-sdf');
+    if (!sdf) return;
+    
+    const blob = new Blob([sdf], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `isodde_ligand_${Date.now()}.sdf`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

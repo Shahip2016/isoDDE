@@ -36,6 +36,11 @@ def main(args_list: List[str] = None) -> int:
         help="SMILES string or comma-separated element list of the ligand (e.g. C,C,O,N).",
     )
     parser.add_argument(
+        "--sdf-ligand",
+        type=str,
+        help="Path to an input SDF file to load ligand elements and coordinates from.",
+    )
+    parser.add_argument(
         "--output-dir",
         type=str,
         default="predictions",
@@ -105,7 +110,18 @@ def main(args_list: List[str] = None) -> int:
 
     # Format ligand inputs
     ligand_elements = None
-    if args.ligand:
+    if args.sdf_ligand:
+        if not os.path.exists(args.sdf_ligand):
+            print(f"[Error] SDF ligand file not found: {args.sdf_ligand}")
+            return 1
+        try:
+            from isodde.io import parse_sdf_file
+            _, ligand_elements = parse_sdf_file(args.sdf_ligand)
+            print(f"Loaded ligand with {len(ligand_elements)} atoms from SDF: {args.sdf_ligand}")
+        except Exception as e:
+            print(f"[Error] Failed to parse SDF ligand file: {e}")
+            return 1
+    elif args.ligand:
         if "," in args.ligand:
             ligand_elements = [e.strip() for e in args.ligand.split(",")]
         else:
@@ -152,6 +168,15 @@ def main(args_list: List[str] = None) -> int:
         full_elements = ["C"] * len(results["predicted_coords"])
 
     write_coords_to_pdb(results["predicted_coords"], full_elements, pdb_out)
+
+    # Save ligand SDF if ligand exists
+    if ligand_elements:
+        from isodde.io import write_coords_to_sdf
+        sdf_out = os.path.join(args.output_dir, "predicted_ligand.sdf")
+        # Extract ligand coordinates: the last len(ligand_elements) coordinates
+        ligand_coords = results["predicted_coords"][-len(ligand_elements):]
+        write_coords_to_sdf(ligand_coords, ligand_elements, sdf_out)
+        print(f"Ligand structure saved to:  {sdf_out}")
     
     # Save metrics
     metrics_data = {

@@ -34,3 +34,41 @@ def test_sdf_write_and_parse():
         assert abs(parsed_coords[0][1] - 5.678) < 1e-3
         assert abs(parsed_coords[0][2] - (-9.012)) < 1e-3
         assert abs(parsed_coords[1][0] - (-2.345)) < 1e-3
+
+
+def test_cli_sdf_input_and_output():
+    from isodde.cli import main
+    coords = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]
+    elements = ["C", "O"]
+    with tempfile.TemporaryDirectory() as tmpdir:
+        sdf_in = os.path.join(tmpdir, "in.sdf")
+        write_coords_to_sdf(coords, elements, sdf_in)
+        
+        output_dir = os.path.join(tmpdir, "out")
+        
+        # Run CLI with --sdf-ligand
+        ret = main(["--sequence", "MTEYKL", "--sdf-ligand", sdf_in, "--output-dir", output_dir, "--small", "--num-seeds", "1"])
+        assert ret == 0
+        
+        # Verify that output predicted_ligand.sdf exists
+        assert os.path.exists(os.path.join(output_dir, "predicted_ligand.sdf"))
+        assert os.path.exists(os.path.join(output_dir, "predicted_complex.pdb"))
+
+
+def test_web_sdf_response():
+    from fastapi.testclient import TestClient
+    from isodde.web import app
+    client = TestClient(app)
+    response = client.post(
+        "/api/predict",
+        json={
+            "protein_sequence": "MTEYKL",
+            "ligand": "C,O,N",
+            "num_seeds": 1
+        }
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "sdf_content" in data
+    assert data["sdf_content"] is not None
+    assert "V2000" in data["sdf_content"]

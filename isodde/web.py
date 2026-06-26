@@ -68,6 +68,7 @@ class PredictionResponse(BaseModel):
     interface_contact_probs: List[List[float]]
     protein_ligand_contact_probs: List[List[float]]
     pdb_content: str
+    sdf_content: Optional[str] = None
     protein_length: int
     ligand_length: int
     elements: List[str]
@@ -160,6 +161,35 @@ def predict(request: PredictionRequest) -> Dict[str, Any]:
             )
         pdb_content = "".join(lines)
 
+    # Generate SDF content if ligand elements are present
+    sdf_content = None
+    if ligand_elements:
+        try:
+            from isodde.io import write_coords_to_sdf
+            with tempfile.NamedTemporaryFile(mode="w+", suffix=".sdf", delete=False) as tmp_sdf:
+                tmp_sdf_name = tmp_sdf.name
+            
+            # Extract ligand coords: last N_ligand coords
+            ligand_coords = results["predicted_coords"][-len(ligand_elements):]
+            write_coords_to_sdf(ligand_coords, ligand_elements, tmp_sdf_name)
+            
+            with open(tmp_sdf_name, "r") as f:
+                sdf_content = f.read()
+            os.remove(tmp_sdf_name)
+        except Exception as e:
+            # Fallback simple SDF generation
+            lines = ["IsoDDE_Ligand\n  IsoDDE 3D Predictor\n\n"]
+            num_atoms = len(ligand_elements)
+            lines.append(f"{num_atoms:3d}  0  0  0  0  0  0  0  0  0999 V2000\n")
+            ligand_coords = results["predicted_coords"][-len(ligand_elements):]
+            for coord, elem in zip(ligand_coords, ligand_elements):
+                lines.append(
+                    f"{coord[0]:10.4f}{coord[1]:10.4f}{coord[2]:10.4f} "
+                    f"{elem:<3s} 0  0  0  0  0  0  0  0  0  0  0  0\n"
+                )
+            lines.append("M  END\n$$$$\n")
+            sdf_content = "".join(lines)
+
     return {
         "pLDDT": results["pLDDT"],
         "ptm": results["ptm"],
@@ -168,6 +198,7 @@ def predict(request: PredictionRequest) -> Dict[str, Any]:
         "interface_contact_probs": results["interface_contact_probs"],
         "protein_ligand_contact_probs": results["protein_ligand_contact_probs"],
         "pdb_content": pdb_content,
+        "sdf_content": sdf_content,
         "protein_length": len(protein_seq),
         "ligand_length": len(ligand_elements) if ligand_elements else 0,
         "elements": full_elements
